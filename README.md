@@ -1,34 +1,28 @@
 # cifar10-fast
 
-Demonstration of training a small ResNet on CIFAR10 to 94% test accuracy in 79 seconds as described [in this blog series](https://www.myrtle.ai/2018/09/24/how_to_train_your_resnet/).
+This is a fork for the purposes of profiling.
 
-<img src="net.svg">
+## How to reproduce
 
-Instructions to reproduce on an `AWS p3.2xlarge` instance:
-- setup an instance with AMI: `Deep Learning AMI (Ubuntu) Version 11.0` (`ami-c47c28bc` in `us-west-2`) 
-- ssh into the instance: `ssh -i $KEY_PAIR ubuntu@$PUBLIC_IP_ADDRESS -L 8901:localhost:8901`
-- on the remote machine
-    - `source activate pytorch_p36`
-    - `pip install pydot` (optional for network visualisation)
-    - `git clone https://github.com/davidcpage/cifar10-fast.git`
-    - `jupyter notebook --no-browser --port=8901`
- - open the jupyter notebook url in a browser, open `demo.ipynb` and run all the cells
+1. Run `nix-shell` to get the correct environment.
+2. Run `nixGLNvidia-510.47.03 python dawn.py` to run the training/profiling script.
 
- In my test, 35 out of 50 runs reached 94% test set accuracy with a median of 94.08%. Runtime for 24 epochs is roughly 79s.
+When running on non-NixOS systems you'll likely need nixGL installed as well. On NixOS you should be able to get away without it.
 
- A second notebook `experiments.ipynb` contains code to reproduce the main results from the [posts](https://www.myrtle.ai/2018/09/24/how_to_train_your_resnet/).
+All results are run on a p3.2xlarge EC2 instance. For convenience the results are already checked in to the `profiling/` subdirectory.
 
-NB: `demo.ipynb` also works on the latest `Deep Learning AMI (Ubuntu) Version 16.0`, but some examples in `experiments.ipynb` trigger a core dump when using TensorCores in versions after `11.0`.
- 
-## DAWNBench 
- To reproduce [DAWNBench](https://dawn.cs.stanford.edu/benchmark/index.html#cifar10-train-time) timings, setup the `AWS p3.2xlarge` instance as above but instead of launching a jupyter notebook on the remote machine, change directory to `cifar10-fast` and run `python dawn.py` from the command line. Timings in DAWNBench format will be saved to `logs.tsv`. 
- 
- Note that DAWNBench timings do not include validation time, as in [this FAQ](https://github.com/stanford-futuredata/dawn-bench-entries), but do include initial preprocessing, as indicated [here](https://groups.google.com/forum/#!topic/dawn-bench-community/YSDRTOLMaMU). DAWNBench timing is roughly 74 seconds which breaks down as 79s (as above) -7s (validation)+ 2s (preprocessing).
+## Issues
 
-## Update 4th Dec 2018
-- Core functionality has moved to `core.py` whilst PyTorch specific stuff is in `torch_backend.py` to allow easier experimentation with different frameworks.
-- Stats (loss/accuracy) are collected on the GPU and bulk transferred to the CPU at the end of each epoch. This speeds up some experiments so timings in `demo.ipynb` and `experiments.ipynb` no longer match the blog posts.
+I get the following error when attempting to create a flamegraph with the stack traces saved by PyTorch:
 
- 
-
-
+```
+[nix-shell:~/dev/cifar10-fast]$ flamegraph.pl --title "pytorch single epoch" --countname "us." profiling/stacks_5.txt
+ERROR: No stack counts found
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="60" onload="init(evt)" viewBox="0 0 1200 60" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<text  x="600.00" y="24" >ERROR: No valid input provided to flamegraph.pl.</text>
+</svg>
+```
